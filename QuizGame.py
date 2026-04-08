@@ -81,13 +81,15 @@ class QuizGame:
             while True:
                 ans = self._prompt_answer_or_hint()
                 if ans == "h":
+                    if used_hint_this:
+                        print("ℹ️ 이미 이 문제에서 힌트를 사용했습니다.")
+                        continue
                     if quiz.hint:
                         print(f"💡 힌트: {quiz.hint}")
                     else:
                         print("💡 힌트가 없습니다.")
-                    if not used_hint_this:
-                        used_hint_this = True
-                        hint_used += 1
+                    used_hint_this = True
+                    hint_used += 1
                     continue
                 user_answer = int(ans)
                 break
