@@ -1,4 +1,5 @@
 from Quiz import Quiz
+from input_util import prompt_int_in_range, prompt_nonempty
 from state_store import STATE_PATH, load_state, quiz_from_dict, quiz_to_dict, save_state
 
 
@@ -8,47 +9,12 @@ class QuizGame:
         self.quizzes: list[Quiz] = [quiz_from_dict(d) for d in self.state["quizzes"]]
 
     @staticmethod
-    def _prompt_nonempty(prompt: str) -> str:
-        while True:
-            raw = input(prompt).strip()
-            if raw == "":
-                print("⚠️ 입력이 비어 있습니다. 다시 입력하세요.")
-                continue
-            return raw
-
-    @staticmethod
     def _prompt_menu() -> int:
-        while True:
-            raw = input("선택: ").strip()
-            if raw == "":
-                print("⚠️ 입력이 비어 있습니다. 1~5 중 하나를 입력하세요.")
-                continue
-            try:
-                value = int(raw)
-            except ValueError:
-                print("⚠️ 숫자로 입력하세요. (1~5)")
-                continue
-            if value < 1 or value > 5:
-                print("⚠️ 1~5 사이의 숫자를 입력하세요.")
-                continue
-            return value
+        return prompt_int_in_range("선택: ", 1, 5)
 
     @staticmethod
     def _prompt_answer() -> int:
-        while True:
-            raw = input("정답 입력 (1~4): ").strip()
-            if raw == "":
-                print("⚠️ 입력이 비어 있습니다. 1~4 중 하나를 입력하세요.")
-                continue
-            try:
-                value = int(raw)
-            except ValueError:
-                print("⚠️ 숫자로 입력하세요. (1~4)")
-                continue
-            if value < 1 or value > 4:
-                print("⚠️ 1~4 사이의 숫자를 입력하세요.")
-                continue
-            return value
+        return prompt_int_in_range("정답 입력 (1~4): ", 1, 4)
 
     def _play_quiz(self) -> None:
         if not self.quizzes:
@@ -104,10 +70,10 @@ class QuizGame:
 
     def _add_quiz(self) -> None:
         print("\n📌 새로운 퀴즈를 추가합니다.")
-        question = self._prompt_nonempty("문제를 입력하세요: ")
+        question = prompt_nonempty("문제를 입력하세요: ")
         choices: list[str] = []
         for i in range(1, 5):
-            choices.append(self._prompt_nonempty(f"선택지 {i}: "))
+            choices.append(prompt_nonempty(f"선택지 {i}: "))
         answer = self._prompt_answer()
 
         new_quiz = Quiz(question, choices, answer)
