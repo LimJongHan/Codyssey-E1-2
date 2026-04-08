@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 .DS_Store
 state.json
+.gitmessage.txt
+Mission-E1-2.pdf
