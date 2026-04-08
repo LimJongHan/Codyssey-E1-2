@@ -1,15 +1,15 @@
 class Quiz:
-    """
-    Quiz 클래스는 퀴즈 문제를 관리하는 클래스입니다.
-    Args:
-        question (str): 퀴즈 질문
-        choices (list): 4개의 선택지 리스트
-        answer (int): 정답(1~4 중 하나)
-    """
-    def __init__(self, question, choices, answer):
+    def __init__(self, question, choices, answer, hint=None):
+        """
+        Args:
+            question (str): 퀴즈 질문
+            choices (list): 4개의 선택지 리스트
+            answer (int): 정답(1~4 중 하나)
+        """
         self.question = question
         self.choices = choices
         self.answer = answer
+        self.hint = hint
 
     def display(self, number):
         """문제를 화면에 출력합니다."""
@@ -21,5 +21,3 @@ class Quiz:
     def is_correct(self, user_input):
         """사용자 입력이 정답인지 확인합니다."""
         return user_input == self.answer
-
-    

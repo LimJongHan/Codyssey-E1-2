@@ -9,20 +9,30 @@ SCHEMA_VERSION = 1
 
 
 def quiz_to_dict(q: Quiz) -> dict:
-    return {"question": q.question, "choices": q.choices, "answer": q.answer}
+    return {
+        "question": q.question,
+        "choices": q.choices,
+        "answer": q.answer,
+        "hint": q.hint,
+    }
 
 
 def quiz_from_dict(d: dict) -> Quiz:
-    return Quiz(d["question"], list(d["choices"]), int(d["answer"]))
+    return Quiz(
+        d["question"],
+        list(d["choices"]),
+        int(d["answer"]),
+        d.get("hint"),
+    )
 
 
 def default_quizzes() -> list[Quiz]:
     return [
-        Quiz("2 + 3 = ?", ["4", "5", "6", "7"], 2),
-        Quiz("10 - 4 = ?", ["4", "5", "6", "7"], 3),
-        Quiz("3 * 4 = ?", ["10", "11", "12", "13"], 3),
-        Quiz("12 / 3 = ?", ["2", "3", "4", "6"], 3),
-        Quiz("9 + 7 = ?", ["14", "15", "16", "17"], 3),
+        Quiz("2 + 3 = ?", ["4", "5", "6", "7"], 2, hint="2에 3을 더합니다."),
+        Quiz("10 - 4 = ?", ["4", "5", "6", "7"], 3, hint="10에서 4를 뺍니다."),
+        Quiz("3 * 4 = ?", ["10", "11", "12", "13"], 3, hint="3을 4번 더합니다."),
+        Quiz("12 / 3 = ?", ["2", "3", "4", "6"], 3, hint="12를 3등분합니다."),
+        Quiz("9 + 7 = ?", ["14", "15", "16", "17"], 3, hint="한 자리 수 덧셈입니다."),
     ]
 
 
@@ -33,6 +43,7 @@ def default_state() -> dict:
         "best_score": None,
         "best_correct": None,
         "best_total": None,
+        "history": [],
     }
 
 
@@ -59,6 +70,7 @@ def load_state(path: Path = STATE_PATH) -> dict:
     data.setdefault("best_score", None)
     data.setdefault("best_correct", None)
     data.setdefault("best_total", None)
+    data.setdefault("history", [])
     return data
 
 
