@@ -1,6 +1,7 @@
 from Quiz import Quiz
 from input_util import prompt_int_in_range, prompt_nonempty
 from state_store import STATE_PATH, load_state, quiz_from_dict, quiz_to_dict, save_state
+import random
 
 
 class QuizGame:
@@ -21,11 +22,19 @@ class QuizGame:
             print("\n저장된 퀴즈가 없습니다. 먼저 퀴즈를 추가하세요.")
             return
 
-        total = len(self.quizzes)
+        total_available = len(self.quizzes)
+        count = prompt_int_in_range(
+            f"\n몇 문제를 풀까요? (1~{total_available}): ", 1, total_available
+        )
+        quizzes = list(self.quizzes)
+        random.shuffle(quizzes)
+        quizzes = quizzes[:count]
+
+        total = len(quizzes)
         correct = 0
         print(f"\n📝 퀴즈를 시작합니다! (총 {total}문제)")
 
-        for idx, quiz in enumerate(self.quizzes, 1):
+        for idx, quiz in enumerate(quizzes, 1):
             print("\n----------------------------------------")
             quiz.display(idx)
             user_answer = self._prompt_answer()
