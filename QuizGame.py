@@ -12,7 +12,7 @@ class QuizGame:
 
     @staticmethod
     def _prompt_menu() -> int:
-        return prompt_int_in_range("선택: ", 1, 5)
+        return prompt_int_in_range("선택: ", 1, 7)
 
     @staticmethod
     def _prompt_answer() -> int:
@@ -138,12 +138,40 @@ class QuizGame:
         for i in range(1, 5):
             choices.append(prompt_nonempty(f"선택지 {i}: "))
         answer = self._prompt_answer()
+        hint = input("힌트(없으면 Enter): ").strip() or None
 
-        new_quiz = Quiz(question, choices, answer)
+        new_quiz = Quiz(question, choices, answer, hint=hint)
         self.quizzes.append(new_quiz)
         self.state["quizzes"] = [quiz_to_dict(q) for q in self.quizzes]
         if save_state(self.state, STATE_PATH):
             print("✅ 퀴즈가 추가되었습니다!")
+
+    def _delete_quiz(self) -> None:
+        if not self.quizzes:
+            print("\n삭제할 퀴즈가 없습니다.")
+            return
+        self._list_quizzes()
+        idx = prompt_int_in_range("삭제할 퀴즈 번호: ", 1, len(self.quizzes))
+        removed = self.quizzes.pop(idx - 1)
+        self.state["quizzes"] = [quiz_to_dict(q) for q in self.quizzes]
+        if save_state(self.state, STATE_PATH):
+            print(f"🗑️ 삭제했습니다: {removed.question}")
+
+    def _show_history(self) -> None:
+        history = self.state.get("history") or []
+        if not history:
+            print("\n기록이 없습니다. 먼저 퀴즈를 풀어보세요.")
+            return
+        print(f"\n🕒 플레이 기록 (총 {len(history)}회, 최근 10개)")
+        print("----------------------------------------")
+        for item in history[-10:]:
+            ts = item.get("timestamp")
+            total = item.get("total")
+            correct = item.get("correct")
+            score_pct = item.get("score_pct")
+            hint_used = item.get("hint_used", 0)
+            print(f"- {ts} | {correct}/{total} | {score_pct}점 | 힌트 {hint_used}회")
+        print("----------------------------------------")
 
     def run(self) -> None:
         while True:
@@ -154,7 +182,9 @@ class QuizGame:
             print("2. 퀴즈 추가")
             print("3. 퀴즈 목록")
             print("4. 점수 확인")
-            print("5. 종료")
+            print("5. 퀴즈 삭제")
+            print("6. 기록 보기")
+            print("7. 종료")
             print("========================================")
 
             try:
@@ -178,5 +208,12 @@ class QuizGame:
             elif choice == 4:
                 self._show_best_score()
             elif choice == 5:
+                try:
+                    self._delete_quiz()
+                except (KeyboardInterrupt, EOFError):
+                    print("\n\n입력이 중단되었습니다. 메뉴로 돌아갑니다.")
+            elif choice == 6:
+                self._show_history()
+            elif choice == 7:
                 print("\n종료합니다.")
                 break
