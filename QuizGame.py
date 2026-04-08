@@ -2,6 +2,7 @@ from Quiz import Quiz
 from input_util import prompt_int_in_range, prompt_nonempty
 from state_store import STATE_PATH, load_state, quiz_from_dict, quiz_to_dict, save_state
 import random
+from datetime import datetime, timezone
 
 
 class QuizGame:
@@ -16,6 +17,25 @@ class QuizGame:
     @staticmethod
     def _prompt_answer() -> int:
         return prompt_int_in_range("정답 입력 (1~4): ", 1, 4)
+
+    @staticmethod
+    def _prompt_answer_or_hint() -> str:
+        while True:
+            raw = input("정답 입력 (1~4) / 힌트(h): ").strip().lower()
+            if raw == "":
+                print("⚠️ 입력이 비어 있습니다. 1~4 또는 h를 입력하세요.")
+                continue
+            if raw == "h":
+                return "h"
+            try:
+                value = int(raw)
+            except ValueError:
+                print("⚠️ 1~4 또는 h로 입력하세요.")
+                continue
+            if value < 1 or value > 4:
+                print("⚠️ 1~4 사이의 숫자를 입력하세요.")
+                continue
+            return str(value)
 
     def _play_quiz(self) -> None:
         if not self.quizzes:
@@ -32,24 +52,43 @@ class QuizGame:
 
         total = len(quizzes)
         correct = 0
+        hint_used = 0
+        points = 0.0
         print(f"\n📝 퀴즈를 시작합니다! (총 {total}문제)")
 
         for idx, quiz in enumerate(quizzes, 1):
             print("\n----------------------------------------")
             quiz.display(idx)
-            user_answer = self._prompt_answer()
+            used_hint_this = False
+            while True:
+                ans = self._prompt_answer_or_hint()
+                if ans == "h":
+                    if quiz.hint:
+                        print(f"💡 힌트: {quiz.hint}")
+                    else:
+                        print("💡 힌트가 없습니다.")
+                    if not used_hint_this:
+                        used_hint_this = True
+                        hint_used += 1
+                    continue
+                user_answer = int(ans)
+                break
+
             if quiz.is_correct(user_answer):
                 print("✅ 정답입니다!")
                 correct += 1
+                points += 0.5 if used_hint_this else 1.0
             else:
                 print(f"❌ 오답입니다. 정답은 {quiz.answer}번입니다.")
 
+        score_pct = int(round(100 * points / total)) if total else 0
         print("\n========================================")
-        print(f"🏆 결과: {total}문제 중 {correct}문제 정답!")
+        print(f"🏆 결과: {total}문제 중 {correct}문제 정답! ({score_pct}점)")
+        if hint_used:
+            print(f"💡 힌트 사용: {hint_used}회 (힌트 사용 시 정답 0.5점 처리)")
         print("========================================")
 
         best_score = self.state.get("best_score")
-        score_pct = int(round(100 * correct / total)) if total else 0
         is_best = best_score is None or score_pct > best_score
         if is_best:
             self.state["best_score"] = score_pct
@@ -57,6 +96,21 @@ class QuizGame:
             self.state["best_total"] = total
             print("🎉 새로운 최고 점수입니다!")
             save_state(self.state, STATE_PATH)
+
+        # 기록 히스토리 저장(보너스)
+        ts = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+        self.state.setdefault("history", [])
+        self.state["history"].append(
+            {
+                "timestamp": ts,
+                "total": total,
+                "correct": correct,
+                "points": points,
+                "score_pct": score_pct,
+                "hint_used": hint_used,
+            }
+        )
+        save_state(self.state, STATE_PATH)
 
     def _list_quizzes(self) -> None:
         if not self.quizzes:
