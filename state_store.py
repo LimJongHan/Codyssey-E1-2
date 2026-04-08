@@ -47,6 +47,77 @@ def default_state() -> dict:
     }
 
 
+def _is_valid_quiz_dict(d: dict) -> bool:
+    if not isinstance(d, dict):
+        return False
+    if not isinstance(d.get("question"), str) or d["question"].strip() == "":
+        return False
+    choices = d.get("choices")
+    if not isinstance(choices, list) or len(choices) != 4:
+        return False
+    if not all(isinstance(c, str) and c.strip() != "" for c in choices):
+        return False
+    try:
+        answer = int(d.get("answer"))
+    except (TypeError, ValueError):
+        return False
+    if answer < 1 or answer > 4:
+        return False
+    hint = d.get("hint")
+    if hint is not None and not isinstance(hint, str):
+        return False
+    return True
+
+
+def _sanitize_state(data: dict) -> tuple[dict, bool]:
+    """
+    state.json 구조가 일부 깨져도 프로그램이 실행되도록 보정한다.
+    - quizzes: 유효한 항목만 남기고, 전부 무효면 기본 퀴즈로 복구
+    - best_* / history: 타입이 이상하면 기본값으로 보정
+    """
+    changed = False
+
+    if not isinstance(data, dict):
+        return default_state(), True
+
+    quizzes = data.get("quizzes")
+    if not isinstance(quizzes, list):
+        quizzes = []
+        changed = True
+
+    valid_quizzes = [q for q in quizzes if _is_valid_quiz_dict(q)]
+    if len(valid_quizzes) != len(quizzes):
+        changed = True
+    if not valid_quizzes:
+        valid_quizzes = [quiz_to_dict(q) for q in default_quizzes()]
+        changed = True
+    data["quizzes"] = valid_quizzes
+
+    # best_score: int 또는 None
+    bs = data.get("best_score")
+    if bs is not None and not isinstance(bs, int):
+        changed = True
+        data["best_score"] = None
+    # best_correct/best_total: int 또는 None
+    for k in ("best_correct", "best_total"):
+        v = data.get(k)
+        if v is not None and not isinstance(v, int):
+            changed = True
+            data[k] = None
+
+    hist = data.get("history")
+    if not isinstance(hist, list):
+        data["history"] = []
+        changed = True
+
+    data.setdefault("version", SCHEMA_VERSION)
+    data.setdefault("best_score", None)
+    data.setdefault("best_correct", None)
+    data.setdefault("best_total", None)
+    data.setdefault("history", [])
+    return data, changed
+
+
 def load_state(path: Path = STATE_PATH) -> dict:
     if (not path.exists()) or path.stat().st_size == 0:
         data = default_state()
@@ -64,13 +135,10 @@ def load_state(path: Path = STATE_PATH) -> dict:
         print(f"⚠️ state.json을 읽을 수 없습니다: {exc}. 기본 데이터로 진행합니다.")
         return default_state()
 
-    if not isinstance(data.get("quizzes"), list):
-        data["quizzes"] = []
-    data.setdefault("version", SCHEMA_VERSION)
-    data.setdefault("best_score", None)
-    data.setdefault("best_correct", None)
-    data.setdefault("best_total", None)
-    data.setdefault("history", [])
+    data, changed = _sanitize_state(data)
+    if changed:
+        print("⚠️ state.json 구조가 올바르지 않아 기본 규칙으로 복구/정리했습니다.")
+        save_state(data, path)
     return data
 
 
