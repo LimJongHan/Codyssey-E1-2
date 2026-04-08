@@ -1,20 +1,11 @@
 from Quiz import Quiz
+from state_store import STATE_PATH, load_state, quiz_from_dict, quiz_to_dict, save_state
 
 
 class QuizGame:
     def __init__(self):
-        self.quizzes: list[Quiz] = self._default_quizzes()
-
-    @staticmethod
-    def _default_quizzes() -> list[Quiz]:
-        # 과제 요구: 선택 주제(기초 산수) 기본 퀴즈 5개 이상
-        return [
-            Quiz("2 + 3 = ?", ["4", "5", "6", "7"], 2),
-            Quiz("10 - 4 = ?", ["4", "5", "6", "7"], 3),
-            Quiz("3 * 4 = ?", ["10", "11", "12", "13"], 3),
-            Quiz("12 / 3 = ?", ["2", "3", "4", "6"], 3),
-            Quiz("9 + 7 = ?", ["14", "15", "16", "17"], 3),
-        ]
+        self.state = load_state(STATE_PATH)
+        self.quizzes: list[Quiz] = [quiz_from_dict(d) for d in self.state["quizzes"]]
 
     @staticmethod
     def _prompt_menu() -> int:
@@ -72,6 +63,16 @@ class QuizGame:
         print("\n========================================")
         print(f"🏆 결과: {total}문제 중 {correct}문제 정답!")
         print("========================================")
+
+        best_score = self.state.get("best_score")
+        score_pct = int(round(100 * correct / total)) if total else 0
+        is_best = best_score is None or score_pct > best_score
+        if is_best:
+            self.state["best_score"] = score_pct
+            self.state["best_correct"] = correct
+            self.state["best_total"] = total
+            print("🎉 새로운 최고 점수입니다!")
+            save_state(self.state, STATE_PATH)
 
     def run(self) -> None:
         while True:
