@@ -1,3 +1,16 @@
+"""게임 전체(메뉴/출제/추가/삭제/점수/기록)를 관리하는 컨트롤러.
+
+설계 요약:
+- `Quiz`: 문항 모델(출력/정답 판정)
+- `state_store`: state.json 저장/로드 + 스키마 복구
+- `input_util`: 공통 입력 검증(빈 입력/비숫자/범위 밖 재입력)
+
+점수 정책(보너스):
+- 힌트를 사용하지 않고 정답: 1.0점
+- 힌트를 한 번이라도 본 뒤 정답: 0.5점
+- 최종 점수는 (points / 총문항수) * 100 을 반올림한 백분율로 표시
+"""
+
 from Quiz import Quiz
 from input_util import prompt_int_in_range, prompt_nonempty
 from state_store import STATE_PATH, load_state, quiz_from_dict, quiz_to_dict, save_state
@@ -7,19 +20,23 @@ from datetime import datetime, timezone
 
 class QuizGame:
     def __init__(self):
+        """state.json을 로드하고 퀴즈 목록을 메모리에 구성한다."""
         self.state = load_state(STATE_PATH)
         self.quizzes: list[Quiz] = [quiz_from_dict(d) for d in self.state["quizzes"]]
 
     @staticmethod
     def _prompt_menu() -> int:
+        """메뉴 선택(1~7). 잘못된 입력은 재입력."""
         return prompt_int_in_range("선택: ", 1, 7)
 
     @staticmethod
     def _prompt_answer() -> int:
+        """정답 번호 입력(1~4). 잘못된 입력은 재입력."""
         return prompt_int_in_range("정답 입력 (1~4): ", 1, 4)
 
     @staticmethod
     def _prompt_answer_or_hint() -> str:
+        """정답(1~4) 또는 힌트 요청(h)을 입력받는다."""
         while True:
             raw = input("정답 입력 (1~4) / 힌트(h): ").strip().lower()
             if raw == "":
@@ -38,6 +55,7 @@ class QuizGame:
             return str(value)
 
     def _play_quiz(self) -> None:
+        """랜덤 출제 + 문제 수 선택 + 힌트/점수/히스토리 기록을 포함한 플레이 루틴."""
         if not self.quizzes:
             print("\n저장된 퀴즈가 없습니다. 먼저 퀴즈를 추가하세요.")
             return
@@ -97,7 +115,7 @@ class QuizGame:
             print("🎉 새로운 최고 점수입니다!")
             save_state(self.state, STATE_PATH)
 
-        # 기록 히스토리 저장(보너스)
+        # 기록 히스토리 저장(보너스): 최고 점수와 별개로 매 플레이 기록을 누적 저장한다.
         ts = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
         self.state.setdefault("history", [])
         self.state["history"].append(
@@ -113,6 +131,7 @@ class QuizGame:
         save_state(self.state, STATE_PATH)
 
     def _list_quizzes(self) -> None:
+        """문제(질문)만 목록으로 출력한다. 정답은 노출하지 않는다."""
         if not self.quizzes:
             print("\n📋 등록된 퀴즈가 없습니다.")
             return
@@ -123,6 +142,7 @@ class QuizGame:
         print("----------------------------------------")
 
     def _show_best_score(self) -> None:
+        """최고 점수(백분율)와 당시 정답/총문항 정보를 출력한다."""
         best_score = self.state.get("best_score")
         if best_score is None:
             print("\n🏆 아직 최고 점수가 없습니다. 먼저 퀴즈를 풀어보세요.")
@@ -132,6 +152,7 @@ class QuizGame:
         print(f"\n🏆 최고 점수: {best_score}점 ({bt}문제 중 {bc}문제 정답)")
 
     def _add_quiz(self) -> None:
+        """사용자 입력으로 퀴즈 1개를 추가하고 state.json에 반영한다."""
         print("\n📌 새로운 퀴즈를 추가합니다.")
         question = prompt_nonempty("문제를 입력하세요: ")
         choices: list[str] = []
@@ -147,6 +168,7 @@ class QuizGame:
             print("✅ 퀴즈가 추가되었습니다!")
 
     def _delete_quiz(self) -> None:
+        """번호를 선택해 퀴즈 1개를 삭제하고 state.json에 반영한다."""
         if not self.quizzes:
             print("\n삭제할 퀴즈가 없습니다.")
             return
@@ -158,6 +180,7 @@ class QuizGame:
             print(f"🗑️ 삭제했습니다: {removed.question}")
 
     def _show_history(self) -> None:
+        """최근 플레이 기록 10개를 간단히 출력한다."""
         history = self.state.get("history") or []
         if not history:
             print("\n기록이 없습니다. 먼저 퀴즈를 풀어보세요.")
@@ -174,6 +197,7 @@ class QuizGame:
         print("----------------------------------------")
 
     def run(self) -> None:
+        """메인 메뉴 루프. Ctrl+C/EOF는 안전하게 종료/복귀하도록 처리한다."""
         while True:
             print("\n========================================")
             print("       🎯 나만의 퀴즈 게임 🎯")

@@ -1,3 +1,15 @@
+"""`state.json` 로드/저장 및 스키마 보정.
+
+과제의 '데이터 영속성' 요구를 만족하기 위해, 퀴즈 목록과 최고 점수/기록을
+프로젝트 루트의 `state.json`에 UTF-8로 저장한다.
+
+핵심 정책:
+- 파일이 없거나 비어 있으면 기본 데이터로 생성
+- JSON이 손상되면 기본 데이터로 복구
+- 구조가 부분적으로 깨졌다면(예: choices 길이 ≠ 4) 유효한 항목만 남기고 정리
+  - 모든 퀴즈가 무효면 기본 퀴즈로 복구
+"""
+
 import json
 from pathlib import Path
 
@@ -9,6 +21,7 @@ SCHEMA_VERSION = 1
 
 
 def quiz_to_dict(q: Quiz) -> dict:
+    """`Quiz` 인스턴스를 state.json에 저장 가능한 dict로 변환."""
     return {
         "question": q.question,
         "choices": q.choices,
@@ -18,6 +31,7 @@ def quiz_to_dict(q: Quiz) -> dict:
 
 
 def quiz_from_dict(d: dict) -> Quiz:
+    """state.json의 dict를 `Quiz` 인스턴스로 변환."""
     return Quiz(
         d["question"],
         list(d["choices"]),
@@ -27,6 +41,7 @@ def quiz_from_dict(d: dict) -> Quiz:
 
 
 def default_quizzes() -> list[Quiz]:
+    """state.json이 없을 때 제공하는 기본 퀴즈 시드(주제: 기초 산수)."""
     return [
         Quiz("2 + 3 = ?", ["4", "5", "6", "7"], 2, hint="2에 3을 더합니다."),
         Quiz("10 - 4 = ?", ["4", "5", "6", "7"], 3, hint="10에서 4를 뺍니다."),
@@ -37,6 +52,7 @@ def default_quizzes() -> list[Quiz]:
 
 
 def default_state() -> dict:
+    """state.json의 기본 스키마(첫 실행/복구 시 사용)."""
     return {
         "version": SCHEMA_VERSION,
         "quizzes": [quiz_to_dict(q) for q in default_quizzes()],
@@ -48,6 +64,7 @@ def default_state() -> dict:
 
 
 def _is_valid_quiz_dict(d: dict) -> bool:
+    """퀴즈 한 항목이 저장 규칙을 만족하는지 검사한다."""
     if not isinstance(d, dict):
         return False
     if not isinstance(d.get("question"), str) or d["question"].strip() == "":
@@ -119,6 +136,7 @@ def _sanitize_state(data: dict) -> tuple[dict, bool]:
 
 
 def load_state(path: Path = STATE_PATH) -> dict:
+    """`state.json`을 읽어 state dict를 반환한다. 필요 시 자동 복구/정리를 수행한다."""
     if (not path.exists()) or path.stat().st_size == 0:
         data = default_state()
         save_state(data, path)
@@ -143,6 +161,7 @@ def load_state(path: Path = STATE_PATH) -> dict:
 
 
 def save_state(data: dict, path: Path = STATE_PATH) -> bool:
+    """state dict를 UTF-8 JSON으로 저장한다. 실패 시 False."""
     try:
         with path.open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
