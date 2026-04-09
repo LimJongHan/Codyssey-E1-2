@@ -25,19 +25,30 @@ python main.py
 
 ## 기능 목록
 
-- **퀴즈 풀기(메뉴 1)**: 저장된 퀴즈를 순서대로 출제하고 정답/오답을 표시한 뒤 결과를 출력합니다.
-- **퀴즈 추가(메뉴 2)**: 문제/선택지 4개/정답(1~4)을 입력받아 저장합니다.
+- **퀴즈 풀기(메뉴 1)**:
+  - 출제 순서를 **랜덤으로 섞고**
+  - 사용자가 **몇 문제를 풀지 선택**한 뒤
+  - 정답/오답을 표시하고 결과를 출력합니다.
+  - 플레이 기록은 `state.json`의 `history`에 누적 저장됩니다.
+- **퀴즈 추가(메뉴 2)**: 문제/선택지 4개/정답(1~4)/힌트(선택)를 입력받아 저장합니다.
 - **퀴즈 목록(메뉴 3)**: 등록된 퀴즈의 “문제(질문)”만 목록으로 확인합니다.
 - **점수 확인(메뉴 4)**: 최고 점수(`best_score`)를 확인합니다. 기록이 없으면 안내합니다.
-- **종료(메뉴 5)**: 프로그램을 종료합니다.
+- **퀴즈 삭제(메뉴 5)**: 번호를 선택해 퀴즈를 삭제하고 파일에 반영합니다.
+- **기록 보기(메뉴 6)**: 최근 플레이 기록을 확인합니다(최근 10개).
+- **종료(메뉴 7)**: 프로그램을 종료합니다.
+
+### 보너스 기능 정책
+
+- **힌트(h) 기능**: 퀴즈 풀이 중 `h`를 입력하면 힌트를 표시합니다. 같은 문제에서 힌트를 이미 사용한 뒤 다시 `h`를 입력하면 “이미 힌트를 사용했습니다” 안내가 나옵니다.
+- **힌트 점수 차감**: 힌트를 보지 않고 정답이면 1.0점, 힌트를 본 뒤 정답이면 0.5점으로 계산합니다. 최종 점수는 \((points / 총문항수) \times 100\)을 반올림한 백분율입니다.
 
 ## 파일 구조
 
 ```
 E1-2/
 ├── main.py         # 진입점
-├── Quiz.py         # Quiz 클래스(문항/선택지/정답, 출력/정답 판정)
-├── QuizGame.py     # 메뉴/게임 흐름/추가/목록/점수 확인
+├── Quiz.py         # Quiz 클래스(문항/선택지/정답/힌트, 출력/정답 판정)
+├── QuizGame.py     # 메뉴/게임 흐름/추가/목록/삭제/점수/기록 보기
 ├── state_store.py  # state.json 로드/저장, 기본 퀴즈 시드, 손상 복구
 ├── input_util.py   # 공통 입력(빈 입력/비숫자/범위 밖 재입력)
 ├── state.json      # 실행 시 생성/갱신 (UTF-8)
@@ -57,22 +68,39 @@ E1-2/
 {
   "version": 1,
   "quizzes": [
-    { "question": "문제", "choices": ["보기1", "보기2", "보기3", "보기4"], "answer": 1 }
+    {
+      "question": "문제",
+      "choices": ["보기1", "보기2", "보기3", "보기4"],
+      "answer": 1,
+      "hint": "힌트(없으면 null)"
+    }
   ],
   "best_score": 100,
   "best_correct": 5,
-  "best_total": 5
+  "best_total": 5,
+  "history": [
+    {
+      "timestamp": "2026-04-08T22:19:00+09:00",
+      "total": 5,
+      "correct": 4,
+      "points": 3.5,
+      "score_pct": 70,
+      "hint_used": 1
+    }
+  ]
 }
 ```
 
 - **`quizzes`**: 퀴즈 목록
 - **`best_score`**: 최고 점수(백분율, 0~100). 아직 기록이 없으면 `null`
 - **`best_correct` / `best_total`**: 최고 점수 당시 정답 수/총 문항 수
+- **`history`**: 플레이 기록 히스토리(날짜/시간, 푼 문제 수, 점수 등)
 
 ### 예외 처리
 
 - `state.json`이 **없거나 비어 있으면** 기본 데이터로 생성합니다.
 - `state.json`이 **손상된 JSON이면** 안내 메시지 후 기본 데이터로 복구합니다.
+- `state.json` 구조가 일부 깨진 경우(예: `choices`가 4개가 아님)에도 실행 가능하도록 **유효한 항목만 남기고 자동 정리**합니다. 유효한 퀴즈가 0개면 기본 퀴즈로 복구합니다.
 
 ## Git 체크리스트(제출용)
 
@@ -83,12 +111,37 @@ E1-2/
   - 복제본에서 README 한 줄 수정 → commit → push
   - 원래 폴더에서 `git pull`로 변경 반영
 
-## 스크린샷(제출용) 예시 경로
+## 스크린샷(제출용)
 
-과제 안내에 따라 캡처 후 아래처럼 정리하면 좋습니다.
+현재 저장소에서는 스크린샷을 `images/` 폴더에 정리했습니다.
 
-- `docs/screenshots/menu.png`
-- `docs/screenshots/play.png`
-- `docs/screenshots/add.png`
-- `docs/screenshots/list.png`
-- `docs/screenshots/score.png`
+- `images/menu.png`
+- `images/play.png`
+- `images/add.png`
+- `images/list.png`
+- `images/score.png`
+- `images/delete.png`
+- `images/history.png`
+
+### 미리보기
+
+#### 메뉴
+![menu](images/menu.png)
+
+#### 퀴즈 풀기
+![play](images/play.png)
+
+#### 퀴즈 추가
+![add](images/add.png)
+
+#### 퀴즈 목록
+![list](images/list.png)
+
+#### 점수 확인
+![score](images/score.png)
+
+#### 퀴즈 삭제
+![delete](images/delete.png)
+
+#### 기록 보기
+![history](images/history.png)
