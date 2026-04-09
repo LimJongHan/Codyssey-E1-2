@@ -7,7 +7,7 @@
 
 점수 정책(보너스):
 - 힌트를 사용하지 않고 정답: 1.0점
-- 힌트를 한 번이라도 본 뒤 정답: 0.5점
+- 힌트를 한 번이라도 본 뒤 정답: 0.8점 (80점)
 - 최종 점수는 (points / 총문항수) * 100 을 반올림한 백분율로 표시
 """
 
@@ -97,7 +97,7 @@ class QuizGame:
             if quiz.is_correct(user_answer):
                 print("✅ 정답입니다!")
                 correct += 1
-                points += 0.5 if used_hint_this else 1.0
+                points += 0.8 if used_hint_this else 1.0
             else:
                 print(f"❌ 오답입니다. 정답은 {quiz.answer}번입니다.")
 
@@ -105,7 +105,7 @@ class QuizGame:
         print("\n========================================")
         print(f"🏆 결과: {total}문제 중 {correct}문제 정답! ({score_pct}점)")
         if hint_used:
-            print(f"💡 힌트 사용: {hint_used}회 (힌트 사용 시 정답 0.5점 처리)")
+            print(f"💡 힌트 사용: {hint_used}회 (힌트 사용 시 정답 0.8점 처리)")
         print("========================================")
 
         best_score = self.state.get("best_score")
